@@ -1,5 +1,27 @@
-# Local development. Add a database service here when persistence is introduced.
+# Local development environment. Credentials are local-only values from .env.
 services:
+  db:
+    image: postgres:15.6-alpine
+    ports:
+      - "127.0.0.1:${LOCAL_DATABASE_PORT:-15432}:5432"
+    environment:
+      POSTGRES_DB: "${LOCAL_DATABASE_NAME:-address_change}"
+      POSTGRES_USER: "${LOCAL_POSTGRES_ADMIN_USERNAME:-postgres}"
+      POSTGRES_PASSWORD: "${LOCAL_POSTGRES_ADMIN_PASSWORD:-local-postgres-admin}"
+      ADDRESS_CHANGE_SCHEMA: "${LOCAL_DATABASE_SCHEMA:-address_change}"
+      ADDRESS_CHANGE_MIGRATION_USERNAME: "${LOCAL_FLYWAY_USERNAME:-address_change_migration}"
+      ADDRESS_CHANGE_MIGRATION_PASSWORD: "${LOCAL_FLYWAY_PASSWORD:-local-address-change-migration}"
+      ADDRESS_CHANGE_RUNTIME_USERNAME: "${LOCAL_DATABASE_RUNTIME_USERNAME:-address_change_runtime}"
+      ADDRESS_CHANGE_RUNTIME_PASSWORD: "${LOCAL_DATABASE_RUNTIME_PASSWORD:-local-address-change-runtime}"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./tools/local/postgres/init-address-change.sh:/docker-entrypoint-initdb.d/10-init-address-change.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
   api:
     build: &api-build
       context: .
@@ -8,6 +30,17 @@ services:
       - "127.0.0.1:${SERVER_PORT:-8080}:8080"
     environment:
       SERVER_PORT: "8080"
+      ENABLE_FLYWAY: "${ENABLE_FLYWAY:-true}"
+      DATABASE_HOST: "db"
+      DATABASE_PORT: "5432"
+      DATABASE_NAME: "${LOCAL_DATABASE_NAME:-address_change}"
+      DATABASE_SCHEMA: "${LOCAL_DATABASE_SCHEMA:-address_change}"
+      DATABASE_SSL_MODE: "disable"
+      FLYWAY_USERNAME: "${LOCAL_FLYWAY_USERNAME:-address_change_migration}"
+      FLYWAY_PASSWORD: "${LOCAL_FLYWAY_PASSWORD:-local-address-change-migration}"
+    depends_on:
+      db:
+        condition: service_healthy
     volumes:
       - ./api/src:/workspace/api/src:ro
       - ./api/pom.xml:/workspace/api/pom.xml:ro
@@ -29,3 +62,4 @@ services:
     command: ["sh", "./mvnw", "--batch-mode", "--no-transfer-progress", "-f", "api/pom.xml", "spotless:apply"]
 volumes:
   maven-cache:
+  postgres-data:

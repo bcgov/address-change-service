@@ -40,23 +40,26 @@ def containers(value):
     return json.loads(value) if value.startswith('[') else [json.loads(line) for line in value.splitlines()]
 
 
-def check_port(config, running):
-    ports = config.get('services', {}).get('api', {}).get('ports', [])
-    bindings = [p for p in ports if p.get('target') == 8080 and p.get('protocol', 'tcp') == 'tcp']
+def check_port(config, running, service, target_port, variable_name):
+    ports = config.get('services', {}).get(service, {}).get('ports', [])
+    bindings = [p for p in ports if p.get('target') == target_port and p.get('protocol', 'tcp') == 'tcp']
     if len(bindings) != 1:
-        raise LifecycleError('INVALID_CONFIG', 'Configure exactly one published TCP port for API port 8080 in compose.yml.')
+        raise LifecycleError(
+            'INVALID_CONFIG',
+            f'Configure exactly one published TCP port for {service} port {target_port} in compose.yml.',
+        )
     binding = bindings[0]
     published = str(binding.get('published', ''))
     if not published.isascii() or not published.isdigit() or not 1 <= int(published) <= 65535:
-        raise LifecycleError('INVALID_PORT', 'SERVER_PORT must be an integer from 1 to 65535.')
+        raise LifecycleError('INVALID_PORT', f'{variable_name} must be an integer from 1 to 65535.')
     port = int(published)
     host = binding.get('host_ip', '0.0.0.0')
     for item in running:
-        if item.get('Service') == 'api' and item.get('State') == 'running':
+        if item.get('Service') == service and item.get('State') == 'running':
             for mapping in item.get('Publishers') or []:
-                if (mapping.get('TargetPort') == 8080 and mapping.get('PublishedPort') == port
+                if (mapping.get('TargetPort') == target_port and mapping.get('PublishedPort') == port
                         and mapping.get('Protocol') == 'tcp' and mapping.get('URL') == host):
-                    print(f'Port {port} is already assigned to this project API.')
+                    print(f'Port {port} is already assigned to this project {service} service.')
                     return
     family = socket.AF_INET6 if ':' in host else socket.AF_INET
     try:
@@ -65,9 +68,12 @@ def check_port(config, running):
                 probe.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
             probe.bind((host, port))
     except OSError as error:
-        raise LifecycleError('PORT_UNAVAILABLE', f'Cannot use API port {port}: {error.strerror}. '
-                           'Choose another SERVER_PORT in .env or your shell; no listener was stopped.') from error
-    print(f'API port {port} is available (availability can change before startup).')
+        raise LifecycleError(
+            'PORT_UNAVAILABLE',
+            f'Cannot use {service} port {port}: {error.strerror}. Choose another {variable_name} '
+            'in .env or your shell; no listener was stopped.',
+        ) from error
+    print(f'{service.capitalize()} port {port} is available (availability can change before startup).')
 
 
 def check_prerequisites(check_binding=False):
@@ -92,8 +98,9 @@ def check_prerequisites(check_binding=False):
         raise LifecycleError('INVALID_CONFIG', 'Compose configuration is invalid. Check compose.yml and SERVER_PORT in .env or the shell.') from error
     print(f'Python {sys.version_info.major}.{sys.version_info.minor}, Compose {version}, and Docker daemon checks passed.')
     if check_binding:
-        running = containers(compose('ps', '--format', 'json', 'api', capture=True).stdout)
-        check_port(config, running)
+        running = containers(compose('ps', '--format', 'json', 'api', 'db', capture=True).stdout)
+        check_port(config, running, 'api', 8080, 'SERVER_PORT')
+        check_port(config, running, 'db', 5432, 'LOCAL_DATABASE_PORT')
 
 
 def compose(*args, capture=False):
@@ -154,7 +161,7 @@ def main():
             except (OSError, subprocess.SubprocessError, ValueError, RuntimeError, IndexError) as error:
                 if args.action in ('start', 'restart', 'status'):
                     try:
-                        compose('logs', '--tail=50', 'api')
+                        compose('logs', '--tail=50', 'api', 'db')
                     except (OSError, subprocess.SubprocessError):
                         pass
                 raise error
@@ -208,9 +215,9 @@ def run_action(args):
     elif args.action == 'stop':
         compose('down')
     elif args.action == 'logs':
-        compose('logs', '--tail=100', 'api')
+        compose('logs', '--tail=100', 'api', 'db')
     elif args.action == 'test':
-        compose('run', '--rm', '--no-deps', 'api', 'sh', './mvnw', '--batch-mode',
+        compose('run', '--rm', '--no-deps', '-e', 'ENABLE_FLYWAY=false', 'api', 'sh', './mvnw', '--batch-mode',
                 '--no-transfer-progress', '-f', 'api/pom.xml', 'clean', 'verify')
     elif args.action in ('format', 'format-check'):
         service = 'formatter' if args.action == 'format' else 'api'

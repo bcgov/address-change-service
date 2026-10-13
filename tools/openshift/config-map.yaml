@@ -23,6 +23,24 @@ parameters:
   - name: SERVICE_ENVIRONMENT
     description: Deployment environment (DEV, TEST, PROD) for ECS service.environment
     required: true
+  - name: ENABLE_FLYWAY
+    description: Whether the application runs Flyway migrations during startup
+    value: "false"
+  - name: DATABASE_HOST
+    description: PostgreSQL primary service name
+    value: "address-change-db-patroni"
+  - name: DATABASE_PORT
+    description: PostgreSQL service port
+    value: "5432"
+  - name: DATABASE_NAME
+    description: Address Change PostgreSQL database
+    value: "address_change"
+  - name: DATABASE_SCHEMA
+    description: Address Change PostgreSQL schema managed by Flyway
+    value: "address_change"
+  - name: DATABASE_SSL_MODE
+    description: PostgreSQL SSL mode
+    value: "require"
 objects:
   - apiVersion: v1
     kind: ConfigMap
@@ -36,3 +54,9 @@ objects:
       APP_LOG_LEVEL: "${APP_LOG_LEVEL}"
       SPRING_WEB_LOG_LEVEL: "${SPRING_WEB_LOG_LEVEL}"
       SPRING_BOOT_AUTOCONFIG_LOG_LEVEL: "${SPRING_BOOT_AUTOCONFIG_LOG_LEVEL}"
+      ENABLE_FLYWAY: "${ENABLE_FLYWAY}"
+      DATABASE_HOST: "${DATABASE_HOST}"
+      DATABASE_PORT: "${DATABASE_PORT}"
+      DATABASE_NAME: "${DATABASE_NAME}"
+      DATABASE_SCHEMA: "${DATABASE_SCHEMA}"
+      DATABASE_SSL_MODE: "${DATABASE_SSL_MODE}"

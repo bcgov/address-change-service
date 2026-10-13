@@ -75,6 +75,19 @@ objects:
               envFrom:
                 - configMapRef:
                     name: "${APP_NAME}-config"
+              env:
+                - name: FLYWAY_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: address-change-db-migration
+                      key: username
+                      optional: true
+                - name: FLYWAY_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: address-change-db-migration
+                      key: password
+                      optional: true
               resources:
                 requests:
                   cpu: "${MIN_CPU}"

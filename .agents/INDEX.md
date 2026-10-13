@@ -10,9 +10,10 @@ Use this index to locate information and decide where changes belong. Paths are 
 | `.agents/rules/` | One folder per rule, with its Markdown file and optional resources. |
 | `.agents/skills/initialize-project/SKILL.md` | Post-clone .env setup, guided or approved field entry, and startup handoff. |
 | `.agents/skills/start-restart/SKILL.md` | Local Start/Restart workflow. |
-| `api/pom.xml` | Spring Boot 4.1.1, Java 25+, Maven 3.6.3+, security overrides for Logback/Jackson/Tomcat, JAR build, and pinned Java formatting. |
+| `api/pom.xml` | Spring Boot 4.1.1, Java 25+, Maven 3.6.3+, Flyway/PostgreSQL support, security overrides for Logback/Jackson/Tomcat, JAR build, and pinned Java formatting. |
 | `api/src/main/java/ca/bc/gov/addresschange/api/AddressChangeApiApplication.java` | Spring Boot entry point and component-scan root. |
-| `api/src/main/resources/application.yaml` | Port, application name, health probes, and ECS console logging/service metadata. |
+| `api/src/main/resources/application.yaml` | Port, application name, opt-in Flyway/PostgreSQL configuration, health probes, and ECS console logging/service metadata. |
+| `api/src/main/resources/db/migration/` | Versioned Flyway SQL migrations; currently an intentionally empty stub. |
 | `api/src/main/java/ca/bc/gov/addresschange/api/logging/` | Request correlation filter, RestClient correlation propagation, HTTP completion LogHelper, and ECS JSON formatter. |
 | `api/src/test/java/ca/bc/gov/addresschange/api/CorrelationCalloutTest.java` | Injected RestClient propagation across requests and context cleanup checks. |
 | `api/src/test/java/ca/bc/gov/addresschange/api/RequestLoggingTest.java` | Typed log fields, privacy exclusions, correlation, and MDC cleanup checks. |
@@ -46,11 +47,12 @@ Use this index to locate information and decide where changes belong. Paths are 
 | `.github/workflows/openapi-spec.yml` | Reusable post-DEV-deployment or manual Java contract generation, metadata enrichment, lint, and artifact upload for docs. |
 | `.github/workflows/util/` | Pinned Spectral validator and rules; run npm ci then npm run lint:openapi here. |
 | `Dockerfile.dev` | Local Maven development image; production packaging is separate. |
-| `compose.yml` | Local API, optional formatter service, health check, source mounts, and Maven cache. |
-| `tools/openshift/api-deployment.yaml` | Parameterized OpenShift Deployment, Service, health probes, and horizontal autoscaler. |
-| `tools/openshift/config-map.yaml` | Parameterized application ConfigMap with deployment environment and root, application, and Spring logging thresholds. |
+| `compose.yml` | Local API and PostgreSQL services, Flyway wiring, health checks, source mounts, persistent database data, and Maven cache. |
+| `tools/local/postgres/init-address-change.sh` | Local-only PostgreSQL bootstrap for the Address Change schema plus separate Flyway migration and application runtime roles. |
+| `tools/openshift/api-deployment.yaml` | Parameterized OpenShift Deployment, Service, health probes, horizontal autoscaler, and Flyway migration Secret references. |
+| `tools/openshift/config-map.yaml` | Parameterized application ConfigMap with deployment environment, database/Flyway settings, and logging thresholds. |
 | `tools/openshift/pod-disruption-budget.yaml` | Optional parameterized availability policy for TEST and PROD deployments with multiple replicas. |
-| `.env.example` | Shared template for the local port; copy to ignored `.env`. |
+| `.env.example` | Shared template for local API/database ports and local-only database credentials; copy to ignored `.env`. |
 | `.dockerignore` | Container build context exclusions. |
 | `.gitignore` | Generated output, local tooling, and editor exclusions. |
 | `.gitattributes` | Keeps Java and shell files on LF line endings and the Windows Maven Wrapper on CRLF. |
