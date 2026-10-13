@@ -113,21 +113,23 @@ class PrerequisiteTests(unittest.TestCase):
     def test_invalid_port(self):
         for port in ('0', '65536', 'abc', '8000-8010'):
             with self.subTest(port=port), self.assertRaisesRegex(RuntimeError, 'SERVER_PORT'):
-                app.check_port(self.config(port), [])
+                app.check_port(self.config(port), [], 'api', 8080, 'SERVER_PORT')
 
     def test_unrelated_listener_is_rejected(self):
         with socket.socket() as listener:
             listener.bind(('127.0.0.1', 0))
             listener.listen()
             with self.assertRaisesRegex(RuntimeError, 'no listener was stopped'):
-                app.check_port(self.config(listener.getsockname()[1]), [])
+                app.check_port(
+                    self.config(listener.getsockname()[1]), [], 'api', 8080, 'SERVER_PORT'
+                )
 
     @patch('app.socket.socket')
     def test_existing_project_api_is_allowed(self, probe):
         running = [{'Service': 'api', 'State': 'running', 'Publishers': [
             {'TargetPort': 8080, 'PublishedPort': 8080, 'Protocol': 'tcp', 'URL': '127.0.0.1'}]}]
         with patch('sys.stdout', new_callable=io.StringIO):
-            app.check_port(self.config(8080), running)
+            app.check_port(self.config(8080), running, 'api', 8080, 'SERVER_PORT')
         probe.assert_not_called()
 
 
