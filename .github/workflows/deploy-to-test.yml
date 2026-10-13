@@ -66,6 +66,7 @@ jobs:
           APP_LOG_LEVEL: ${{ vars.APP_LOG_LEVEL || 'INFO' }}
           SPRING_WEB_LOG_LEVEL: ${{ vars.SPRING_WEB_LOG_LEVEL || 'INFO' }}
           SPRING_BOOT_AUTOCONFIG_LOG_LEVEL: ${{ vars.SPRING_BOOT_AUTOCONFIG_LOG_LEVEL || 'INFO' }}
+          ENABLE_FLYWAY: ${{ vars.ENABLE_FLYWAY || 'false' }}
         run: |
           set -euo pipefail
           # Login to OpenShift and select project
@@ -93,6 +94,7 @@ jobs:
             -p APP_LOG_LEVEL="${APP_LOG_LEVEL}" \
             -p SPRING_WEB_LOG_LEVEL="${SPRING_WEB_LOG_LEVEL}" \
             -p SPRING_BOOT_AUTOCONFIG_LOG_LEVEL="${SPRING_BOOT_AUTOCONFIG_LOG_LEVEL}" \
+            -p ENABLE_FLYWAY="${ENABLE_FLYWAY}" \
             | oc apply -f -
 
           # Apply the TEST availability policy
